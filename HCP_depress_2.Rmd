@@ -1,0 +1,189 @@
+---
+title: "HCP depressions 2"
+output: html_notebook
+---
+
+```{r}
+library(plyr)
+library(vroom)
+library(tidyselect)
+```
+
+```{r}
+p_corr<-function(p){
+  val = 1 - p 
+}
+
+tf<-function(df,x){
+  mat = matrix(df[x,], nrow = 15,ncol = 15)
+  return(mat)
+}
+
+x<-c(1,2,3,4,5,6,7,8,9,10,11)  
+x<-as.data.frame(t(x))
+
+finder<-function(df, liist){
+  #threshDF<-sapply(df, p_corr)
+  sigDF<-df <= 0.05 
+  for (i in x){
+  new_element<-tf(sigDF, i)
+  liist[[i]] <- new_element
+  }
+  return(liist)
+}
+
+```
+
+```{r}
+listofiles<-list.files(path = "~/Google Drive/HCP/HCP_graph/1200/datasets/depress/results/results/", pattern = "p*.txt")
+listofiles<-listofiles[-c(1, 2, 3, 4, 9,10,11,12,13,14,15,16)]
+listofiles <- paste("~/Google Drive/HCP/HCP_graph/1200/datasets/depress/results/results/", listofiles,sep="")
+
+df <- vroom( listofiles, id = "ID", col_names = FALSE)
+df<- df %>% 
+  mutate(across(where(is.character), str_remove_all, pattern = fixed("~/Google Drive/HCP/HCP_graph/1200/datasets/depress/results/results/"))) %>%
+  mutate(across(where(is.character), str_remove_all, pattern = fixed(".txt"))) 
+contrasts<-c("mean","pos int","neg int","pos dep","neg dep","pos BMI","neg BMI","pos symp","neg symp","pos Hb","neg Hb")
+
+df<-df %>% 
+  group_by(ID) %>%
+  mutate(contrasts = contrasts)
+dim(df)[1]
+df[2:226]<-1-df[2:226]
+df$ID
+```
+
+```{r}
+AX<-subset(df, df$ID == "pAX")
+DT<-subset(df, df$ID == "pDT")
+AXhb<-subset(df, df$ID == "pAXhb")
+DThb<-subset(df, df$ID == "pDThb")
+dim(AX)
+```
+
+```{r}
+listAX <- list()
+tAX<-finder(as.data.frame(AX[2:226]), listAX)
+tAX[[3]]
+```
+# Positive interaction with BMI and anxiety 
+IC 4 (visual)  and 8 (cerebellum) t= 3.8726
+IC 13 (Mouth somatosensory) and 8 (cerebellum) t= 3.6826
+# Negative interaction with BMI and anxiety
+IC 1 (visual) and 11 (DAN) t= 3.7938
+IC 1 (visual) and 13 (Mouth somatosensory) t= 3.8089
+IC 2 (DMN) and 8  (cerebellum) t= 3.4972
+IC 13 (Mouth somatosensory) and 11 (DAN) t= 3.3511
+```{r}
+tlistAX <- list()
+ttAX<-tfinder(as.data.frame(tAX[2:226]), tlistAX)
+ttAX[[2]]
+```
+
+```{r}
+listAXhb <- list()
+tAXhb<-tfinder(as.data.frame(AXhb[2:226]), listAXhb)
+tAXhb[[3]]
+```
+```{r}
+tlistAXhb <- list()
+ttAXhb<-tfinder(as.data.frame(tAXhb[2:226]), tlistAXhb)
+ttAXhb[[3]]
+
+t2r<-function(t, n){
+  DF = n-1
+  Rsq = t^2 / (t^2 + DF)
+  return (sqrt(Rsq))
+  }
+t2r(4.4721, 325)
+```
+# Positive interaction with HbA1c and anxiety
+IC 1 (visual) and 8 (cerebellum) t= 3.7562, r= 0.2042774
+IC 4 (visual/DAN) and 8 (cerebellum) t= 3.3986  r= 0.185533
+IC 9 (DMN) and 8 (cerebellum) t=  3.3273
+IC 13 (Mouth somatosensory) and 8 (cerebellum) t= 4.291
+# Negative interaction with HbA1c and anxiety
+IC 1 (visual) and 11 (DAN) t= 3.8679
+IC 1 (visual) and 13 (Mouth somatosensory) t= 4.5622
+IC 7 (FPN, DMN) and 8 (cerebellum) t= 3.4514
+IC 9 (DMN) and 10 (VAN/DMN) t= 3.7291  
+IC 11 (DAN) and 13 (Mouth somatosensory) t= 4.4721 
+
+```{r}
+listDT <- list()
+DT[2:226]
+tDT<-finder(as.data.frame(DT[2:226]), listDT)
+tDT<-tfinder(as.data.frame(DT[2:226]), listDT)
+
+tDT[[3]]
+```
+```{r}
+tlistDT <- list()
+ttDT<-tfinder(as.data.frame(tDT[2:226]), tlistDT)
+ttDT[[3]]
+t2r(3.6456, 325)
+```
+# positive interaction with depression and BMI
+IC 4 (visual/DAN) and 8 (cerebellum) t= 3.4061  
+IC 5 (FPN) and 7  (FPN, DMN) t= 3.3702
+IC 5 (FPN) and 14 (Salience FPN) t= 3.565
+IC 8 (cerebellum) and 13 (Mouth somatosensory) t= 4.0497
+# negative interaction with depression and BMI
+IC 1 (visual) and 13 (Mouth somatosensory) t= 3.394
+IC 11 (DAN) and 13 (Mouth somatosensory) t= 3.6456
+
+```{r}
+listDThb <- list()
+DThb[2:226]
+tDThb<-finder(as.data.frame(DThb[2:226]), listDThb)
+tDThb[[10]]
+```
+# Positive interaction with HbA1c and depression
+None
+# Negative interaction with HbA1c and depression
+None
+
+
+
+```{r}
+listofiles<-list.files(path = "~/Google Drive/HCP/HCP_graph/1200/datasets/depress/results/results/", pattern = "p*.txt")
+listofiles<-listofiles[-c(1,2,3,4,5,6,7,8,13,14,15,16)]
+listofiles <- paste("~/Google Drive/HCP/HCP_graph/1200/datasets/depress/results/results/", listofiles,sep="")
+tdf <- vroom( listofiles, id = "ID", col_names = FALSE)
+tdf<- tdf %>% 
+  mutate(across(where(is.character), str_remove_all, pattern = fixed("~/Google Drive/HCP/HCP_graph/1200/datasets/depress/results/results/"))) %>%
+  mutate(across(where(is.character), str_remove_all, pattern = fixed(".txt"))) 
+contrasts<-c("mean","pos int","neg int","pos dep","neg dep","pos BMI","neg BMI","pos symp","neg symp","pos Hb","neg Hb")
+tdf
+```
+
+
+```{r}
+tAX<-subset(tdf, tdf$ID == "tAX")
+tDT<-subset(tdf, tdf$ID == "tDT")
+tAXhb<-subset(tdf, tdf$ID == "tAXhb")
+tDThb<-subset(tdf, tdf$ID == "tDThb")
+dim(tAX)
+```
+
+```{r}
+tf<-function(df,x){
+  mat = matrix(df[x,], nrow = 15,ncol = 15)
+  return(mat)
+}
+
+x<-c(1,2,3,4,5,6,7,8,9,10,11)  
+x<-as.data.frame(t(x))
+
+tfinder<-function(df, liist){
+  for (i in x){
+  new_element<-tf(df, i)
+  liist[[i]] <- new_element
+  }
+  return(liist)
+}
+
+```
+
+
+

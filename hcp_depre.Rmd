@@ -1,0 +1,254 @@
+---
+title: "HCP depressions"
+output: html_notebook
+---
+
+```{r}
+library(plyr)
+library(tidyverse)
+library(vroom)
+library(Hmisc)
+library(psych)
+library(vtable)
+```
+s
+```{r}
+df1<-vroom("~/Google Drive/HCP/HCP_graph/1200/datasets/unrestricted_gshearrer_4_19_2018_11_31_37.csv")
+df2<-vroom("~/Google Drive/HCP/HCP_graph/1200/datasets/RESTRICTED_gshearrer_4_19_2018_11_33_34.csv")
+df3<-vroom("~/Google Drive/HCP/HCP_graph/1200/datasets/HCP1200-Motion-Summaries.csv")
+
+dim(df2)
+dim(df1)
+df<-join(df1,df2)
+df<-join(df, df3)
+
+keep<-c("Subject", "HbA1C", "BMI", "SSAGA_Depressive_Ep", "SSAGA_Depressive_Sx", "FamHist_Moth_Dep", "FamHist_Fath_Dep", "ASR_Anxd_Pct", "DSM_Depr_T", "ASR_Totp_T", "Gender", "Age_in_Yrs", "ZygositySR", "Race", "Ethnicity", "motion")
+df<-df[keep]
+dim(df)
+
+
+hist(df$HbA1C)
+hist(log(df$BMI))
+df$BMI_log<-log(df$BMI)
+
+df<-subset(df, df$HbA1C > 4)
+df<-subset(df, df$HbA1C < 7.5)
+hist(df$HbA1C)
+
+sapply(df, class)
+df<-subset(df, df$ZygositySR == "NotTwin")
+df$ZygositySR <-as.factor(df$ZygositySR)
+df$Race<-as.factor(df$Race)
+df$Ethnicity<-as.factor(df$Ethnicity)
+df$Gender<-as.factor(df$Gender)
+df$Subject<-as.factor(df$Subject)
+df$SSAGA_Depressive_Ep<-as.factor(df$SSAGA_Depressive_Ep)
+
+
+df$predia[df$HbA1C >= 5.7] <- "Prediabetes"
+df$predia[df$HbA1C < 5.7] <- "Recommended"
+df$predia<-as.factor(df$predia)
+summary(df$predia)
+chisq.test(df$predia, df$SSAGA_Depressive_Ep)
+table(df$predia, df$SSAGA_Depressive_Ep)
+
+df<-df[!is.na(df$SSAGA_Depressive_Ep), ]
+summary(df$Race)
+
+df$race[df$Race == "Am. Indian/Alaskan Nat."] <- "4"
+df$race[df$Race == "Asian/Nat. Hawaiian/Othr Pacific Is."] <- "3"
+df$race[df$Race == "Black or African Am."] <- "2"
+df$race[df$Race == "More than one"] <- "5"
+df$race[df$Race == "Unknown or Not Reported"] <- "6"
+df$race[df$Race == "White"] <- "1"
+df$race<-as.factor(df$race)
+summary(df$race)
+summary(df$motion)
+
+df<-df[!is.na(df$motion),]
+df<-df[!is.na(df$ASR_Anxd_Pct),]
+df<-df[!is.na(df$ASR_Totp_T),]
+
+summary(df)
+u<-unique(df$Subject)
+length(u)
+df <- df[order(df$Subject),]
+write.table(df$Subject, "~/Google Drive/HCP/HCP_graph/1200/datasets/depress/subs_all.txt", row.names = F,sep = "\t")
+```
+# move the time series then run below
+
+```{r}
+fil<-list.files(path = "~/Google Drive/HCP/HCP_graph/1200/datasets/depress/node_timeseries/3T_HCP1200_MSMAll_d15_ts2/", pattern = ".txt")
+fil_clean<-str_remove_all(fil, "[.tx]")
+fil_clean
+length(fil_clean)
+scan_df <- df[df$Subject %in% fil_clean, ]
+```
+
+
+```{r}
+dim(scan_df)
+nums<-c("HbA1C", "BMI", "SSAGA_Depressive_Sx", "ASR_Anxd_Pct", "DSM_Depr_T", "ASR_Totp_T")
+mat<-df[nums]
+rcorr(as.matrix(mat), type="spearman")
+
+ggplot(scan_df, aes(HbA1C, ASR_Anxd_Pct)) +
+    geom_point(shape=1) +    # Use hollow circles
+    geom_smooth(method=lm)   # Add linear regression line 
+
+```
+
+```{r}
+#pdf<-scan_df %>%
+#  group_by(SSAGA_Depressive_Ep) %>%
+#  summarise(
+#          count = n(),
+#          mean_sep = mean(SSAGA_Depressive_Sx),
+#          sd = sd(SSAGA_Depressive_Sx),
+#          mean_BMI = mean(BMI),
+#          sd_BMI = sd(BMI)
+#            )
+
+# Error bars represent standard error of the mean
+#ggplot(pdf, aes(x=SSAGA_Depressive_Ep, y=mean_BMI)) + 
+#    geom_bar(position=position_dodge(), stat="identity") +
+#    geom_errorbar(aes(ymin=mean_BMI-sd_BMI, ymax=mean_BMI+sd_BMI),
+#                  width=.2,                    # Width of the error bars
+#                  position=position_dodge(.9))
+#describeBy(x = df$SSAGA_Depressive_Sx, group = df$SSAGA_Depressive_Ep)
+```
+```{r}
+m1<-lm(ASR_Totp_T ~ HbA1C + BMI + Gender + Age_in_Yrs + Race + motion, data = scan_df)
+summary(m1)
+# HbA1c related to ASR total 
+# BMI related to ASR total
+# Gender related to ASR total
+m2<-lm(DSM_Depr_T ~ HbA1C + BMI*SSAGA_Depressive_Sx + Gender + Age_in_Yrs + race + motion , data = scan_df)
+summary(m2)
+# HbA1c related
+# BMI
+# Symptoms 
+# Age
+m3<-lm(ASR_Anxd_Pct ~ HbA1C + SSAGA_Depressive_Sx + BMI + Gender + Age_in_Yrs + race + motion, data = scan_df)
+summary(m3)
+# HbA1c
+# Symptoms
+# BMI
+```
+
+```{r}
+logit_m0 <- glm(SSAGA_Depressive_Ep ~ HbA1C + BMI + Gender + Age_in_Yrs + Race + SSAGA_Depressive_Sx, data  = scan_df, family = "binomial")
+summary(logit_m0)
+# BMI predicts depressive episodes
+# Even after controlling for symptoms
+
+
+ggplot(scan_df, aes(HbA1C, ASR_Anxd_Pct, group = SSAGA_Depressive_Ep, color = SSAGA_Depressive_Ep)) +
+    geom_point(shape=1) +    # Use hollow circles
+    geom_smooth(method=lm)   # Add linear regression line 
+```
+
+# HbA1c
+# BMI
+# Symptoms 
+# Age
+# Race
+
+
+```{r}
+interest<-c("Subject", "HbA1C" , "BMI" , "SSAGA_Depressive_Sx", "ASR_Anxd_Pct", "DSM_Depr_T", "motion", "Age_in_Yrs", "race")
+scan_df_int<-scan_df[interest]
+scan_df_int<-scan_df_int[complete.cases(scan_df_int), ]
+dim(scan_df_int)
+
+
+scan_df_int$BMI_c<-scale(scan_df_int$BMI)
+scan_df_int$ASR_Anxd_Pct_c<-scale(scan_df_int$ASR_Anxd_Pct)
+scan_df_int$DSM_Depr_T_c<-scale(scan_df_int$DSM_Depr_T)
+scan_df_int$HbA1C_c<-scale(scan_df_int$HbA1C)
+scan_df_int$motion_c<-scale(scan_df_int$motion)
+```
+
+```{r}
+library(lm.beta)
+m2<-lm(DSM_Depr_T_c ~ HbA1C_c + BMI_c + SSAGA_Depressive_Sx + motion_c + Age_in_Yrs + race, data = scan_df_int)
+summary(m2)
+lm.beta(m2)
+
+m3<-lm(ASR_Anxd_Pct_c ~ HbA1C_c + SSAGA_Depressive_Sx + BMI_c + motion_c + Age_in_Yrs + race, data = scan_df_int)
+summary(m3)
+lm.beta(m3)
+```
+```{r}
+depress_T<-c("Subject", "DSM_Depr_T_c", "HbA1C_c", "BMI_c", "SSAGA_Depressive_Sx", "motion_c", "Age_in_Yrs", "race")
+Anxd<-c("Subject", "ASR_Anxd_Pct_c", "HbA1C_c", "BMI_c", "SSAGA_Depressive_Sx", "motion_c", "Age_in_Yrs", "race")
+subs<-c("Subject")
+
+DT<-scan_df_int[depress_T]
+DT$interaction<-(DT$DSM_Depr_T_c)*(DT$BMI_c)
+DT$X <- 1
+DT <- DT[, c("Subject", "X", "interaction", "DSM_Depr_T_c", "BMI_c", "SSAGA_Depressive_Sx" ,"HbA1C_c", "motion_c", "Age_in_Yrs", "race")]
+head(DT)
+
+
+DT_hb<-scan_df_int[depress_T]
+DT_hb$interaction<-(DT_hb$DSM_Depr_T_c)*(DT_hb$HbA1C_c)
+DT_hb$X <- 1
+DT_hb <- DT_hb[, c("Subject", "X", "interaction", "DSM_Depr_T_c", "BMI_c", "SSAGA_Depressive_Sx" ,"HbA1C_c", "motion_c", "Age_in_Yrs", "race")]
+head(DT_hb)
+
+
+AX<-scan_df_int[Anxd]
+AX$interaction<-(AX$ASR_Anxd_Pct_c)*(AX$BMI_c)
+AX$X<-1
+dim(AX)
+AX <- AX[, c("Subject", "X", "interaction", "ASR_Anxd_Pct_c", "BMI_c", "SSAGA_Depressive_Sx" ,"HbA1C_c", "motion_c", "Age_in_Yrs", "race")]
+head(AX)
+
+AX_hb<-scan_df_int[Anxd]
+AX_hb$interaction<-(AX_hb$ASR_Anxd_Pct_c)*(AX_hb$HbA1C_c)
+AX_hb$X<-1
+AX_hb <- AX_hb[, c("Subject", "X", "interaction", "ASR_Anxd_Pct_c", "BMI_c", "SSAGA_Depressive_Sx" ,"HbA1C_c", "motion_c", "Age_in_Yrs", "race")]
+head(AX_hb)
+dim(AX_hb)
+SUB<-scan_df_int[subs]
+SUB<-SUB[!duplicated(SUB), ]
+length(SUB)
+```
+
+```{r}
+mea<-c(1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0)
+int<-c(0, 1, -1, 0, 0, 0, 0, 0, 0, 0, 0)
+DSM<-c(0, 0, 0, 1, -1, 0, 0, 0, 0, 0, 0)
+bms<-c(0, 0, 0, 0, 0, 1, -1, 0, 0, 0, 0)
+symp<-c(0, 0, 0, 0, 0, 0, 0, 1, -1, 0, 0)
+hb<-c(0, 0, 0, 0, 0, 0, 0, 0, 0, 1, -1)
+mo<-c(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0)
+age<-c(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0)
+race<-c(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0)
+cont<-cbind(mea, int, DSM, bms, symp, hb, mo, age, race)
+cont
+```
+
+```{r}
+st(scan_df_int[2:10])
+```
+
+
+
+```{r}
+write.table(cont, "~/Google Drive/HCP/HCP_graph/1200/datasets/depress/con.txt", row.names = F, col.names = F, sep = "\t")
+write.table(SUB, "~/Google Drive/HCP/HCP_graph/1200/datasets/depress/subs.txt", row.names = F,sep = "\t")
+write.table(DT[2:10], "~/Google Drive/HCP/HCP_graph/1200/datasets/depress/scan_DT.txt", row.names = F,col.names = F, sep = "\t")
+write.table(AX[2:10], "~/Google Drive/HCP/HCP_graph/1200/datasets/depress/scan_AX.txt", row.names = F,col.names = F, sep = "\t")
+
+write.table(DT_hb[2:10], "~/Google Drive/HCP/HCP_graph/1200/datasets/depress/scan_DThb.txt", row.names = F,col.names = F, sep = "\t")
+write.table(AX_hb[2:10], "~/Google Drive/HCP/HCP_graph/1200/datasets/depress/scan_AXhb.txt", row.names = F,col.names = F, sep = "\t")
+
+```
+
+
+```{r}
+1300/4
+```
+

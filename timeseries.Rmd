@@ -1,0 +1,448 @@
+---
+title: "HCP depressions 3"
+output: html_notebook
+---
+
+```{r}
+library(vroom)
+library(stringr)
+library(plyr)
+library(dplyr)
+library(data.table)
+library(ggpubr)
+library(psych)
+```
+
+```{r}
+unres<-read.table("~/Google Drive/HCP/HCP_graph/1200/datasets/unrestricted_gshearrer_4_19_2018_11_31_37.csv", header=T, sep=",")
+res<-read.table("~/Google Drive/HCP/HCP_graph/1200/datasets/RESTRICTED_gshearrer_4_19_2018_11_33_34.csv", header=T, sep=",")
+beh<-join(unres, res)
+interest<-c("Subject", "DDisc_AUC_200","DDisc_AUC_40K", "Taste_AgeAdj", "CardSort_AgeAdj","Flanker_AgeAdj"  )
+beh<-beh[interest]
+```
+
+
+```{r}
+scan_df<-vroom("~/Google Drive/HCP/HCP_graph/1200/datasets/depress/scan_df.csv")
+# Find tertiles
+hbTert = quantile(scan_df$HbA1C, c(0:3/3))
+hbTert
+
+# classify values
+scan_df$tert = with(scan_df, 
+               cut(HbA1C, 
+                   hbTert, 
+                   include.lowest = T, 
+                   labels = c("Low", "Medium", "High")))
+head(scan_df$HbA1C)
+```
+
+```{r}
+setwd("~/Google Drive/HCP/HCP_graph/1200/datasets/depress/results/results/")
+files <- fs::dir_ls(glob = "netamts*.txt")
+files
+NM<-vroom(files, col_names = F, id = "path")
+NM$Flavor<-str_remove(NM$path, ".txt")
+
+colz<-vroom("~/Google Drive/HCP/HCP_graph/1200/datasets/depress/colnames.csv")
+
+new<-names(colz)
+old<-colnames(NM[2:226])
+
+setnames(NM, old = old, new = new)
+cbPalette <- c("red3", "midnightblue", "pink")
+
+```
+
+```{r}
+setwd("~/Google Drive/HCP/HCP_graph/1200/datasets/depress/node_timeseries/3T_HCP1200_MSMAll_d15_ts2/")
+files <- fs::dir_ls(glob = "*.txt")
+files
+t_s<-vroom(files, col_names = F, id = "path")
+
+t_s$Subject<-str_remove(t_s$path, ".txt")
+total_df<-join(scan_df, t_s)
+names(total_df)
+```
+
+```{r}
+df<- total_df %>%
+  group_by(Subject, tert) %>%
+  summarise(mean1 = mean(X1),
+            mean2 = mean(X2),
+            mean3 = mean(X3),
+            mean4 = mean(X4),
+            mean5 = mean(X5),
+            mean6 = mean(X6),
+            mean7 = mean(X7),
+            mean8 = mean(X8),
+            mean9 = mean(X9),
+            mean10 = mean(X10),
+            mean11 = mean(X11),
+            mean12 = mean(X12),
+            mean13 = mean(X13),
+            mean14 = mean(X14),
+            mean15 = mean(X15),
+            meanHb = mean(HbA1C))
+head(df)
+df<-join(df, beh)
+scan_df<-join(scan_df, beh)
+```
+
+```{r}
+names(scan_df)
+```
+
+
+```{r}
+p1<-ggplot(subset(df, df$tert != "Medium"), aes(mean8, mean1, colour = tert)) +
+  geom_point(shape=1) +
+  geom_smooth(method=lm, size = 2)+
+  scale_y_continuous(name="IC 1")+
+  scale_x_continuous(name="IC 8")+
+  theme(axis.title.x = element_text( size=20),axis.text.x  = element_text(size=20))+
+  theme(axis.title.y = element_text( size=20),axis.text.y  = element_text(size=20))+
+  theme_classic() + 
+  scale_color_manual(values = cbPalette)+
+  theme(axis.text = element_text(size = 20)) + 
+  theme(axis.title.x =  element_text(size = 25)) +
+  theme(axis.title.y =  element_text(size = 25)) 
+p1
+
+p2<-ggplot(subset(df, df$tert != "Medium"), aes(mean8, mean4, colour = tert)) +
+  geom_point(shape=1) +
+  geom_smooth(method=lm, size = 2)+
+  scale_y_continuous(name="IC 4")+
+  scale_x_continuous(name="IC 8")+
+  theme(axis.title.x = element_text( size=20),axis.text.x  = element_text(size=20))+
+  theme(axis.title.y = element_text( size=20),axis.text.y  = element_text(size=20))+
+  theme_classic() + 
+  scale_color_manual(values = cbPalette)+
+  theme(axis.text = element_text(size = 20)) + 
+  theme(axis.title.x =  element_text(size = 25)) +
+  theme(axis.title.y =  element_text(size = 25)) 
+p2
+
+p3<-ggplot(subset(df, df$tert != "Medium"), aes(mean8, mean7, colour = tert)) +
+  geom_point(shape=1) +
+  geom_smooth(method=lm, size = 2)+
+  scale_y_continuous(name="IC 7")+
+  scale_x_continuous(name="IC 8")+
+  theme(axis.title.x = element_text( size=20),axis.text.x  = element_text(size=20))+
+  theme(axis.title.y = element_text( size=20),axis.text.y  = element_text(size=20))+
+  theme_classic() + 
+  scale_color_manual(values = cbPalette)+
+  theme(axis.text = element_text(size = 20)) + 
+  theme(axis.title.x =  element_text(size = 25)) +
+  theme(axis.title.y =  element_text(size = 25)) 
+p3
+
+p4<-ggplot(subset(df, df$tert != "Medium"), aes(mean8, mean13, colour = tert)) +
+  geom_point(shape=1) +
+  geom_smooth(method=lm, size = 2)+
+  scale_y_continuous(name="IC 13")+
+  scale_x_continuous(name="IC 8")+
+  theme(axis.title.x = element_text( size=20),axis.text.x  = element_text(size=20))+
+  theme(axis.title.y = element_text( size=20),axis.text.y  = element_text(size=20))+
+  theme_classic() + 
+  scale_color_manual(values = cbPalette)+
+  theme(axis.text = element_text(size = 20)) + 
+  theme(axis.title.x =  element_text(size = 25)) +
+  theme(axis.title.y =  element_text(size = 25)) 
+p4
+```
+
+
+
+
+
+
+
+```{r}
+NMAX<-subset(NM, NM$Flavor == "netamts1AX")%>%
+  cbind(.,scan_df)
+NMAXhb<-subset(NM, NM$Flavor == "netamts1AXhb")%>%
+  cbind(.,scan_df)
+NMDT<-subset(NM, NM$Flavor == "netamts1DT")%>%
+  cbind(.,scan_df)
+NMDThb<-subset(NM, NM$Flavor == "netamts1DThb")%>%
+  cbind(.,scan_df)
+```
+
+
+```{r}
+names(NMAXhb)
+```
+
+
+```{r}
+
+grouper<-NMAXhb %>%
+  group_by(Subject, tert, Gender, Race, Age_in_Yrs) %>%
+  summarise(mean_age = mean(Age_in_Yrs, na.rm = TRUE), 
+            mean_hba1c = mean(HbA1C, na.rm = TRUE),
+            mean_symp = mean(SSAGA_Depressive_Sx, na.rm = TRUE),
+            mean_BMI = mean(BMI, na.rm = TRUE ),
+            mean_anx = mean(ASR_Anxd_Pct, na.rm = TRUE), 
+            mean_motion = mean(motion, na.rm = TRUE),
+            mean_1v8 = mean(`1v8`, na.rm = TRUE),
+            mean_4v8 = mean(`4v8`, na.rm = TRUE),
+            mean_7v8 = mean(`7v8`, na.rm = TRUE),
+            mean_13v8 = mean(`13v8`, na.rm = TRUE),
+            mean_DDisc_AUC_200 = mean(DDisc_AUC_200, na.rm = TRUE),
+            mean_DDisc_AUC_40K = mean(DDisc_AUC_40K, na.rm = TRUE),
+            mean_Taste_AgeAdj = mean(Taste_AgeAdj, na.rm = TRUE),
+            mean_CardSort_AgeAdj = mean(CardSort_AgeAdj, na.rm = TRUE),
+            mean_Flanker_AgeAdj = mean(Flanker_AgeAdj, na.rm = TRUE)
+            ) 
+names(grouper)
+```
+
+```{r}
+mod1<-lm(mean_DDisc_AUC_40K ~ mean_1v8 + mean_hba1c*mean_anx + mean_age + Gender + Race, data = grouper)
+t1<-summary(mod1)  
+
+mod2<-lm(mean_DDisc_AUC_200 ~ mean_1v8 + mean_hba1c*mean_anx + mean_age + Gender + Race, data = grouper)
+t2<-summary(mod2) 
+```
+
+```{r}
+mod3<-lm(mean_DDisc_AUC_40K ~ mean_4v8 + mean_hba1c*mean_anx + mean_age + Gender + Race, data = grouper)
+t3<-summary(mod3) 
+
+
+mod4<-lm(mean_DDisc_AUC_200 ~ mean_4v8 + mean_hba1c*mean_anx + mean_age + Gender + Race, data = grouper)
+t4<-summary(mod4) 
+```
+
+```{r}
+mod5<-lm(mean_DDisc_AUC_40K ~ mean_7v8 + mean_hba1c*mean_anx + mean_age + Gender + Race, data = grouper)
+t5<-summary(mod5)  
+
+mod6<-lm(mean_DDisc_AUC_200 ~ mean_7v8 + mean_hba1c*mean_anx + mean_age + Gender + Race, data = grouper)
+t6<-summary(mod6) 
+
+lm.beta(mod6)
+```
+
+```{r}
+mod7<-lm(mean_DDisc_AUC_40K ~ mean_13v8 + mean_hba1c*mean_anx + mean_age + Gender + Race, data = grouper)
+t7<-summary(mod7)  
+
+mod8<-lm(mean_DDisc_AUC_200 ~ mean_13v8 + mean_hba1c*mean_anx + mean_age + Gender + Race, data = grouper)
+t8<-summary(mod8) 
+t8
+library(lm.beta)
+lm.beta(mod8)
+```
+
+# correction for multiple comparisons
+```{r}
+all2<-rbind(t1$coefficients[,4], t2$coefficients[,4], t3$coefficients[,4], t4$coefficients[,4], t5$coefficients[,4], t6$coefficients[,4], t7$coefficients[,4], t8$coefficients[,4])
+dim(all2)
+all2
+adj_p<-p.adjust(all2, method = "BH")
+adj_p
+adj_p[14]
+
+# 14, 16 significant
+# mod 6 and mod 8 mod 2
+```
+Area under the curve values range from 0 to 1; 
+higher AUC values indicate lower discounting by delay (i.e., a preference for delayed, larger rewards)
+lower AUC values correspond to steeper, or more impatient, discounting (i.e., a preference for smaller, more immediate rewards)
+```{r}
+pmod6<-ggplot(subset(grouper, grouper$tert != "Medium"), aes(mean_7v8, mean_DDisc_AUC_200, colour = tert)) +
+  geom_point(shape=1) +
+  geom_smooth(method=lm, size = 2)+
+  scale_y_continuous(name="Delay discounting $200 AUC")+
+  scale_x_continuous(name="Correlation between IC 7 and 8")+
+  theme(axis.title.x = element_text( size=20),axis.text.x  = element_text(size=20))+
+  theme(axis.title.y = element_text( size=20),axis.text.y  = element_text(size=20))+
+  theme_classic() + 
+  scale_color_manual(values = cbPalette)+
+  theme(axis.text = element_text(size = 20)) + 
+  theme(axis.title.x =  element_text(size = 25)) +
+  theme(axis.title.y =  element_text(size = 25)) 
+pmod6
+
+
+pmod8<-ggplot(subset(grouper, grouper$tert != "Medium"), aes(mean_13v8, mean_DDisc_AUC_200, colour = tert)) +
+  geom_point(shape=1) +
+  geom_smooth(method=lm, size = 2)+
+  scale_y_continuous(name="Delay discounting $200 AUC")+
+  scale_x_continuous(name="Correlation between IC 13 and 8")+
+  theme(axis.title.x = element_text( size=20),axis.text.x  = element_text(size=20))+
+  theme(axis.title.y = element_text( size=20),axis.text.y  = element_text(size=20))+
+  theme_classic() + 
+  scale_color_manual(values = cbPalette)+
+  theme(axis.text = element_text(size = 20)) + 
+  theme(axis.title.x =  element_text(size = 25)) +
+  theme(axis.title.y =  element_text(size = 25)) 
+pmod8
+
+ggsave("pmod6_7v8.png", plot = pmod6, path = "~/Google Drive/HCP/HCP_graph/1200/datasets/depress/brains/",width = 7, height = 6, units = "in")
+
+ggsave("pmod6_13v8.png", plot = pmod8, path = "~/Google Drive/HCP/HCP_graph/1200/datasets/depress/brains/",width = 7, height = 6, units = "in")
+
+```
+
+
+
+```{r}
+p4<-ggplot(subset(grouper, grouper$tert != "Medium"), aes(mean_1v8, mean_DDisc_AUC_200, colour = tert)) +
+  geom_point(shape=1) +
+  geom_smooth(method=lm, size = 2)+
+  scale_y_continuous(name="Delay discounting 200")+
+  scale_x_continuous(name="1v8")+
+  theme(axis.title.x = element_text( size=20),axis.text.x  = element_text(size=20))+
+  theme(axis.title.y = element_text( size=20),axis.text.y  = element_text(size=20))+
+  theme_classic() + 
+  scale_color_manual(values = cbPalette)+
+  theme(axis.text = element_text(size = 20)) + 
+  theme(axis.title.x =  element_text(size = 25)) +
+  theme(axis.title.y =  element_text(size = 25)) 
+p4
+
+p4<-ggplot(subset(grouper, grouper$tert != "Medium"), aes(mean_1v8, mean_DDisc_AUC_40K, colour = tert)) +
+  geom_point(shape=1) +
+  geom_smooth(method=lm, size = 2)+
+  scale_y_continuous(name="Delay discounting 200")+
+  scale_x_continuous(name="1v8")+
+  theme(axis.title.x = element_text( size=20),axis.text.x  = element_text(size=20))+
+  theme(axis.title.y = element_text( size=20),axis.text.y  = element_text(size=20))+
+  theme_classic() + 
+  scale_color_manual(values = cbPalette)+
+  theme(axis.text = element_text(size = 20)) + 
+  theme(axis.title.x =  element_text(size = 25)) +
+  theme(axis.title.y =  element_text(size = 25)) 
+p4
+
+```
+
+```{r}
+describeBy(NMAXhb$HbA1C, NMAXhb$tert)
+```
+
+# Positive interaction with HbA1c and anxiety
+IC 1 (visual) and 8 (cerebellum/Hippocampus) t= 3.7562, r= 0.2042774
+IC 4 (visual/DAN) and 8 (cerebellum) t= 3.3986  r= 0.185533
+IC 9 (DMN) and 8 (cerebellum) t=  3.3273
+IC 13 (Mouth somatosensory) and 8 (cerebellum) t= 4.291
+
+## About IC 8
+Vermis Crus I<-process of executive functions, such as working memory, planning, organizing, and strategy formation
+Vermis VIIIb<- represent a site where the cortical motor areas can influence descending control systems involved in the regulation of whole-body posture and locomotion, nucleus to the ventral tegmental area (VTA) that also receives Purkinje axons
+disinhibition of the mPFC and striatal subdivisions that receive dopaminergic projections, mainly from the VTA. Moreover, cerebellar impairment induced an upregulation
+of PNN expression in the mPFC
+the posterior cerebellar cortex may exert inhibitory control over the striatum and mPFC
+
+```{r}
+NMAXhb<-subset(NMAXhb, NMAXhb$tert != "Medium")
+
+p1<-ggplot(NMAXhb, aes(ASR_Anxd_Pct, `1v8`, colour = tert)) +
+  geom_point(shape=1) +
+  geom_smooth(method=lm, size = 2)+
+  scale_y_continuous(name="Correlation between IC1 and IC8")+
+  scale_x_continuous(name="Anxiety and Depression")+
+  theme(axis.title.x = element_text( size=20),axis.text.x  = element_text(size=20))+
+  theme(axis.title.y = element_text( size=20),axis.text.y  = element_text(size=20))+
+  theme_classic() + 
+  scale_color_manual(values = cbPalette)+
+  theme(axis.text = element_text(size = 20)) + 
+  theme(axis.title.x =  element_text(size = 25)) +
+  theme(axis.title.y =  element_text(size = 25)) 
+p1
+ggsave("1v8g.png", plot = p1, path = "~/Google Drive/HCP/HCP_graph/1200/datasets/depress/brains/",width = 7, height = 6, units = "in")
+
+p2<-ggplot(NMAXhb, aes(ASR_Anxd_Pct, `4v8`, colour = tert)) +
+  geom_point(shape=1) +
+  geom_smooth(method=lm, size = 2)+
+  scale_y_continuous(name="Correlation between IC4 and IC8")+
+  scale_x_continuous(name="Anxiety and Depression")+
+  theme(axis.title.x = element_text( size=20),axis.text.x  = element_text(size=20))+
+  theme(axis.title.y = element_text( size=20),axis.text.y  = element_text(size=20))+
+  theme_classic()+ 
+  scale_color_manual(values = cbPalette)+
+  theme(axis.text = element_text(size = 20)) + 
+  theme(axis.title.x =  element_text(size = 25)) +
+  theme(axis.title.y =  element_text(size = 25)) 
+ggsave("4v8g.png", plot = p2, path = "~/Google Drive/HCP/HCP_graph/1200/datasets/depress/brains/",width = 7, height = 6, units = "in")
+
+p3<-ggplot(NMAXhb, aes(ASR_Anxd_Pct, `9v8`, colour = tert)) +
+  geom_point(shape=1) +
+  geom_smooth(method=lm)+scale_y_continuous(name="9 and 8")+
+  scale_x_continuous(name="Anxiety and Depression")+
+  theme(axis.title.x = element_text( size=20),axis.text.x  = element_text(size=20))+
+  theme(axis.title.y = element_text( size=20),axis.text.y  = element_text(size=20))+
+  theme_classic()
+
+p4<-ggplot(NMAXhb, aes(ASR_Anxd_Pct, `13v8`, colour = tert)) +
+  geom_point(shape=1) +
+  geom_smooth(method=lm, size = 2)+
+  scale_y_continuous(name="Correlation between \n IC 13 and IC 8")+
+  scale_x_continuous(name="Anxiety and Depression")+
+  theme(axis.title.x = element_text( size=20),axis.text.x  = element_text(size=20))+
+  theme(axis.title.y = element_text( size=20),axis.text.y  = element_text(size=20))+
+  theme_classic()+ 
+  scale_color_manual(values = cbPalette)+
+  theme(axis.text = element_text(size = 20)) + 
+  theme(axis.title.x =  element_text(size = 25)) +
+  theme(axis.title.y =  element_text(size = 25)) 
+ggsave("13v8g.png", plot = p4, path = "~/Google Drive/HCP/HCP_graph/1200/datasets/depress/brains/",width = 7, height = 6, units = "in")
+
+ggarrange(p1, p2, p3, p4, ncol = 2)
+```
+
+
+
+# Negative interaction with HbA1c and anxiety
+IC 1 (visual) and 11 (DAN/somatomotor) t= 3.8679
+IC 1 (visual) and 13 (Mouth somatosensory and caudate and Vermis VI) t= 4.5622
+IC 7 (FPN including right parietal lobule) and 8 (cerebellum) t= 3.4514
+IC 9 (DMN) and 10 (DMN) t= 3.7291  
+IC 11 (DAN/somatosensory/Hippocampus) and 13 (Mouth somatosensory) t= 4.4721 
+```{r}
+NMAXhb<-subset(NMAXhb, NMAXhb$tert != "Medium")
+p1<-ggplot(NMAXhb, aes(ASR_Anxd_Pct, `1v11`, colour = tert)) +
+  geom_point(shape=1) +
+  geom_smooth(method=lm)+scale_y_continuous(name="1 and 11")+
+  scale_x_continuous(name="Anxiety and Depression")+
+  theme(axis.title.x = element_text( size=20),axis.text.x  = element_text(size=20))+
+  theme(axis.title.y = element_text( size=20),axis.text.y  = element_text(size=20))+
+  theme_classic()
+
+p2<-ggplot(NMAXhb, aes(ASR_Anxd_Pct, `1v13`, colour = tert)) +
+  geom_point(shape=1) +
+  geom_smooth(method=lm)+scale_y_continuous(name="1 and 13")+
+  scale_x_continuous(name="Anxiety and Depression")+
+  theme(axis.title.x = element_text( size=20),axis.text.x  = element_text(size=20))+
+  theme(axis.title.y = element_text( size=20),axis.text.y  = element_text(size=20))+
+  theme_classic()
+
+p3<-ggplot(NMAXhb, aes(ASR_Anxd_Pct, `7v8`, colour = tert)) +
+  geom_point(shape=1) +
+  geom_smooth(method=lm, size = 2)+
+  scale_y_continuous(name="Correlation between IC 7 and IC 8")+
+  scale_x_continuous(name="Anxiety and Depression")+
+  theme(axis.title.x = element_text( size=20),axis.text.x  = element_text(size=20))+
+  theme(axis.title.y = element_text( size=20),axis.text.y  = element_text(size=20))+
+  theme_classic()+ 
+  scale_color_manual(values = cbPalette)+
+  theme(axis.text = element_text(size = 20)) + 
+  theme(axis.title.x =  element_text(size = 25)) +
+  theme(axis.title.y =  element_text(size = 25)) 
+ggsave("7v8g.png", plot = p3, path = "~/Google Drive/HCP/HCP_graph/1200/datasets/depress/brains/",width = 7, height = 6, units = "in")
+
+
+p4<-ggplot(NMAXhb, aes(ASR_Anxd_Pct, `9v10`, colour = tert)) +
+  geom_point(shape=1) +
+    geom_smooth(method=lm)+scale_y_continuous(name="Correlation between IC 8 and IC")+
+  scale_x_continuous(name="Anxiety and Depression")+
+  theme(axis.title.x = element_text( size=20),axis.text.x  = element_text(size=20))+
+  theme(axis.title.y = element_text( size=20),axis.text.y  = element_text(size=20))+
+  theme_classic()
+ggarrange(p1, p2, p3, p4, ncol = 2)
+```
+# Post hoc
+Check delayed discounting AUC 
